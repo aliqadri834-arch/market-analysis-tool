@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Market Signals</title>
+<style>
+  .signals-widget { font-family: system-ui, sans-serif; }
+  .signals-widget .updated-at {
+    font-size: 0.85em;
+    color: #888;
+    margin-bottom: 8px;
+  }
+  .signals-table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .signals-table th,
+  .signals-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #333;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .signals-table th:first-child,
+  .signals-table td:first-child {
+    text-align: left;
+  }
+  .signals-table th {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .signals-table th:hover {
+    color: #4a9eff;
+  }
+  .flagged-row {
+    background-color: rgba(255, 165, 0, 0.15);
+  }
+  .error-row {
+    color: #888;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div id="market-signals" class="signals-widget">Loading market signals&hellip;</div>
+
+<script>
+(async function () {
+  // Raw GitHub content is always live (no CDN caching), matching the
+  // 30-min update cadence from the GitHub Actions workflow.
+  const DATA_URL = "https://raw.githubusercontent.com/aliqadri834-arch/market-analysis-tool/main/data/signals.json";
+
+  const COLUMNS = [
+    { key: "ticker", label: "Ticker" },
+    { key: "price", label: "Price" },
+    { key: "volume_ratio", label: "Vol Ratio" },
+    { key: "volume_flagged", label: "Vol Flag" },
+    { key: "move", label: "Move" },
+    { key: "atr", label: "ATR" },
+    { key: "move_atr_ratio", label: "Move/ATR" },
+    { key: "atr_flagged", label: "ATR Flag" },
+  ];
+
+  const container = document.getElementById("market-signals");
+  let tableHolder = null;
+  let rows = [];
+  let sortKey = "ticker";
+  let sortAsc = true;
+
+  function formatCell(row, key) {
+    if (row.error) return "";
+    const v = row[key];
+    if (v === null || v === undefined) return "";
+    switch (key) {
+      case "price":
+      case "atr":
+        return v.toFixed(2);
+      case "move":
+        return (v >= 0 ? "+" : "") + v.toFixed(2);
+      case "volume_ratio":
+        return v.toFixed(2) + "x";
+      case "move_atr_ratio":
+        return (v >= 0 ? "+" : "") + v.toFixed(2) + "x";
+      case "volume_flagged":
+      case "atr_flagged":
+        return v ? "FLAG" : "";
+      default:
+        return v;
+    }
+  }
+
+  function render() {
+    const sorted = [...rows].sort((a, b) => {
+      const av = a[sortKey];
+      const bv = b[sortKey];
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ? 1 : -1;
+      return 0;
+    });
+
+    const headerHtml = COLUMNS.map((col) => {
+      const arrow = sortKey === col.key ? (sortAsc ? " ▲" : " ▼") : "";
+      return `<th data-key="${col.key}">${col.label}${arrow}</th>`;
+    }).join("");
+
+    const bodyHtml = sorted
+      .map((row) => {
+        if (row.error) {
+          return `<tr class="error-row"><td>${row.ticker}</td><td colspan="${COLUMNS.length - 1}">Error: ${row.error}</td></tr>`;
+        }
+        const flagged = row.volume_flagged || row.atr_flagged;
+        const cells = COLUMNS.map((col) => `<td>${formatCell(row, col.key)}</td>`).join("");
+        return `<tr class="${flagged ? "flagged-row" : ""}">${cells}</tr>`;
+      })
+      .join("");
+
+    tableHolder.innerHTML = `
+      <table class="signals-table">
+        <thead><tr>${headerHtml}</tr></thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+    `;
+
+    tableHolder.querySelectorAll("th").forEach((th) => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.key;
+        if (sortKey === key) {
+          sortAsc = !sortAsc;
+        } else {
+          sortKey = key;
+          sortAsc = true;
+        }
+        render();
+      });
+    });
+  }
+
+  try {
+    const res = await fetch(DATA_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const payload = await res.json();
+    rows = payload.signals;
+
+    const updatedAt = document.createElement("div");
+    updatedAt.className = "updated-at";
+    updatedAt.textContent = "Last updated: " + new Date(payload.generated_at).toLocaleString();
+
+    container.innerHTML = "";
+    container.appendChild(updatedAt);
+    tableHolder = document.createElement("div");
+    container.appendChild(tableHolder);
+
+    render();
+  } catch (err) {
+    container.textContent = "Failed to load market signals.";
+    console.error(err);
+  }
+})();
+</script>
+
+</body>
+</html>
