@@ -7,6 +7,10 @@ COLUMNS = [
     ("ATR", 8),
     ("Move/ATR", 9),
     ("ATR Flag", 9),
+    ("IV", 8),
+    ("HV", 8),
+    ("IV/HV", 8),
+    ("IV Flag", 8),
 ]
 
 
@@ -18,9 +22,24 @@ def _separator() -> str:
     return "  ".join("-" * width for _, width in COLUMNS)
 
 
-def _format_row(ticker: str, signals: dict) -> str:
+def _iv_hv_cells(record: dict) -> list[str]:
+    iv_hv = record["iv_hv"]
+    if iv_hv is not None:
+        return [
+            f"{iv_hv['iv']:.1%}",
+            f"{iv_hv['hv']:.1%}",
+            f"{iv_hv['iv_hv_ratio']:.2f}x",
+            "FLAG" if iv_hv["iv_hv_flagged"] else "",
+        ]
+    if record["iv_hv_error"] is not None:
+        return ["—", "—", "—", "ERR"]
+    return ["", "", "", ""]
+
+
+def _format_row(record: dict) -> str:
+    signals = record["signals"]
     values = [
-        ticker,
+        record["ticker"],
         f"{signals['close']:.2f}",
         f"{signals['volume_ratio']:.2f}x",
         "FLAG" if signals["volume_flagged"] else "",
@@ -28,19 +47,31 @@ def _format_row(ticker: str, signals: dict) -> str:
         f"{signals['atr']:.2f}",
         f"{signals['move_in_atr_units']:+.2f}x",
         "FLAG" if signals["atr_flagged"] else "",
+        *_iv_hv_cells(record),
     ]
     return "  ".join(str(v).ljust(width) for v, (_, width) in zip(values, COLUMNS))
 
 
-def _format_error_row(ticker: str, error: Exception) -> str:
-    return f"{ticker.ljust(8)}  ERROR: {error}"
+def _format_error_row(record: dict) -> str:
+    return f"{record['ticker'].ljust(8)}  ERROR: {record['error']}"
 
 
-def print_report(results: list[tuple[str, dict, Exception | None]]) -> None:
+def print_report(results: list[dict]) -> None:
     print(_header())
     print(_separator())
-    for ticker, signals, error in results:
-        if error is not None:
-            print(_format_error_row(ticker, error))
+
+    iv_hv_errors = []
+    for record in results:
+        if record["error"] is not None:
+            print(_format_error_row(record))
         else:
-            print(_format_row(ticker, signals))
+            print(_format_row(record))
+
+        if record["iv_hv_error"] is not None:
+            iv_hv_errors.append(record)
+
+    if iv_hv_errors:
+        print()
+        print("IV/HV data unavailable:")
+        for record in iv_hv_errors:
+            print(f"  {record['ticker']}: {record['iv_hv_error']}")

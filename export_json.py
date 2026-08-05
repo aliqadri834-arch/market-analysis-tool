@@ -3,10 +3,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def _signal_to_dict(ticker: str, signals: dict | None, error: Exception | None) -> dict:
+def _signals_fields(record: dict) -> dict:
+    signals = record["signals"]
+    error = record["error"]
+
     if error is not None:
         return {
-            "ticker": ticker,
             "price": None,
             "volume_ratio": None,
             "volume_flagged": None,
@@ -18,7 +20,6 @@ def _signal_to_dict(ticker: str, signals: dict | None, error: Exception | None) 
         }
 
     return {
-        "ticker": ticker,
         "price": round(float(signals["close"]), 2),
         "volume_ratio": round(float(signals["volume_ratio"]), 3),
         "volume_flagged": bool(signals["volume_flagged"]),
@@ -30,12 +31,44 @@ def _signal_to_dict(ticker: str, signals: dict | None, error: Exception | None) 
     }
 
 
-def write_json(results: list[tuple[str, dict | None, Exception | None]], path: str) -> None:
+def _iv_hv_fields(record: dict) -> dict:
+    iv_hv = record["iv_hv"]
+    iv_hv_error = record["iv_hv_error"]
+
+    if iv_hv is not None:
+        return {
+            "iv": round(float(iv_hv["iv"]), 4),
+            "hv": round(float(iv_hv["hv"]), 4),
+            "iv_hv_ratio": round(float(iv_hv["iv_hv_ratio"]), 3),
+            "iv_hv_flagged": bool(iv_hv["iv_hv_flagged"]),
+            "iv_hv_expiry": iv_hv["expiry"],
+            "iv_hv_error": None,
+        }
+
+    return {
+        "iv": None,
+        "hv": None,
+        "iv_hv_ratio": None,
+        "iv_hv_flagged": None,
+        "iv_hv_expiry": None,
+        "iv_hv_error": str(iv_hv_error) if iv_hv_error is not None else None,
+    }
+
+
+def _record_to_dict(record: dict) -> dict:
+    return {
+        "ticker": record["ticker"],
+        **_signals_fields(record),
+        **_iv_hv_fields(record),
+    }
+
+
+def write_json(results: list[dict], path: str) -> None:
     payload = {
         "generated_at": datetime.now(timezone.utc)
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z"),
-        "signals": [_signal_to_dict(ticker, signals, error) for ticker, signals, error in results],
+        "signals": [_record_to_dict(record) for record in results],
     }
 
     output_path = Path(path)

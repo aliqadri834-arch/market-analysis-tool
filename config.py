@@ -12,9 +12,16 @@ FETCH_PERIOD = "6mo"
 VOLUME_LOOKBACK_DAYS = 30
 VOLUME_SPIKE_MULTIPLIER = 2.0
 
-# ATR move signal
+# ATR move signal. ATR_LOOKBACK_DAYS is also reused as the realized-vol
+# window for the IV/HV signal below, so both signals look back the same
+# distance.
 ATR_LOOKBACK_DAYS = 20
 ATR_MOVE_MULTIPLIER = 1.5
+
+# IV vs HV divergence signal
+OPTIONS_MIN_DAYS_TO_EXPIRY = 15  # skip a monthly expiry about to expire
+IV_HV_HIGH_MULTIPLIER = 1.3
+IV_HV_LOW_MULTIPLIER = 0.7
 
 # JSON export (for the website)
 JSON_OUTPUT_PATH = "data/signals.json"

@@ -1,3 +1,6 @@
+# Backtest research script's local data cache
+backtest_cache.pkl
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
