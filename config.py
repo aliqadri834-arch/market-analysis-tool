@@ -23,6 +23,20 @@ OPTIONS_MIN_DAYS_TO_EXPIRY = 15  # skip a monthly expiry about to expire
 IV_HV_HIGH_MULTIPLIER = 1.3
 IV_HV_LOW_MULTIPLIER = 0.7
 
+# Possible-catalyst news matching. Only used for tickers that are already
+# flagged. A headline only counts as a match if one of these names (or the
+# ticker symbol itself) appears in the headline's title -- title only, not
+# summary, and not just "anything in the news feed close in time."
+TICKER_COMPANY_NAMES = {
+    "NVDA": ["Nvidia"],
+    "TSLA": ["Tesla"],
+    "SPY": ["S&P 500"],
+    "QQQ": ["Nasdaq"],
+    "AAPL": ["Apple"],
+    "GOOG": ["Google", "Alphabet"],
+    "AMZN": ["Amazon"],
+}
+
 # JSON export (for the website)
 JSON_OUTPUT_PATH = "data/signals.json"
 

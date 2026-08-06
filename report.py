@@ -61,6 +61,7 @@ def print_report(results: list[dict]) -> None:
     print(_separator())
 
     iv_hv_errors = []
+    catalysts = []
     for record in results:
         if record["error"] is not None:
             print(_format_error_row(record))
@@ -69,9 +70,23 @@ def print_report(results: list[dict]) -> None:
 
         if record["iv_hv_error"] is not None:
             iv_hv_errors.append(record)
+        if record["catalyst_status"] in ("found", "unclear", "error"):
+            catalysts.append(record)
 
     if iv_hv_errors:
         print()
         print("IV/HV data unavailable:")
         for record in iv_hv_errors:
             print(f"  {record['ticker']}: {record['iv_hv_error']}")
+
+    if catalysts:
+        print()
+        print("Possible catalysts (flagged tickers):")
+        for record in catalysts:
+            if record["catalyst_status"] == "found":
+                c = record["catalyst"]
+                print(f"  {record['ticker']}: {c['headline']} ({c['source']}) — {c['url']}")
+            elif record["catalyst_status"] == "unclear":
+                print(f"  {record['ticker']}: No clear catalyst identified")
+            else:
+                print(f"  {record['ticker']}: catalyst lookup failed — {record['catalyst_error']}")

@@ -49,3 +49,11 @@ def fetch_option_chain(ticker: str) -> tuple[str, pd.DataFrame, pd.DataFrame]:
     expiry = select_expiry(ticker_obj)
     chain = ticker_obj.option_chain(expiry)
     return expiry, chain.calls, chain.puts
+
+
+def fetch_news(ticker: str) -> list[dict]:
+    """Raw recent-news items for a ticker, as returned by yfinance. Not
+    filtered for relevance -- Yahoo's feed mixes in stories about other
+    companies, so callers must check relevance themselves (see catalyst.py).
+    """
+    return yf.Ticker(ticker).news

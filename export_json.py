@@ -55,11 +55,20 @@ def _iv_hv_fields(record: dict) -> dict:
     }
 
 
+def _catalyst_fields(record: dict) -> dict:
+    return {
+        "catalyst_status": record["catalyst_status"],
+        "catalyst": record["catalyst"],
+        "catalyst_error": record["catalyst_error"],
+    }
+
+
 def _record_to_dict(record: dict) -> dict:
     return {
         "ticker": record["ticker"],
         **_signals_fields(record),
         **_iv_hv_fields(record),
+        **_catalyst_fields(record),
     }
 
 
